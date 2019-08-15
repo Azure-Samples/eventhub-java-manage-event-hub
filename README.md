@@ -4,12 +4,12 @@ languages:
 - java
 products:
 - azure
-services: Eventhub
-platforms: java
-author: yaohaizh
+extensions:
+- services: Eventhub
+- platforms: java
 ---
 
-## Getting Started with Eventhub - Manage Event Hub - in Java ##
+# Getting Started with Eventhub - Manage Event Hub - in Java #
 
 
   Azure Event Hub sample for managing event hub -
