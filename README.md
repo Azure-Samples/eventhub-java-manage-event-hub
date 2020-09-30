@@ -5,8 +5,8 @@ languages:
 products:
 - azure
 extensions:
-- services: Eventhub
-- platforms: java
+  services: Eventhub
+  platforms: java
 ---
 
 # Getting Started with Eventhub - Manage Event Hub - in Java #
