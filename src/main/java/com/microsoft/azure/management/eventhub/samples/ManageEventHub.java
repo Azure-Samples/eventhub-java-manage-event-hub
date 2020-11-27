@@ -5,91 +5,86 @@
  */
 package com.microsoft.azure.management.eventhub.samples;
 
-import com.microsoft.azure.PagedList;
-import com.microsoft.azure.management.Azure;
-import com.microsoft.azure.management.eventhub.EventHub;
-import com.microsoft.azure.management.eventhub.EventHubConsumerGroup;
-import com.microsoft.azure.management.eventhub.EventHubNamespace;
-import com.microsoft.azure.management.resources.fluentcore.arm.Region;
-import com.microsoft.azure.management.resources.fluentcore.model.Creatable;
-import com.microsoft.azure.management.resources.fluentcore.utils.SdkContext;
-import com.microsoft.azure.management.samples.Utils;
-import com.microsoft.azure.management.storage.StorageAccount;
-import com.microsoft.azure.management.storage.StorageAccountSkuType;
-import com.microsoft.rest.LogLevel;
-
 import java.io.File;
+
+import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.policy.HttpLogDetailLevel;
+import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.management.AzureEnvironment;
+import com.azure.core.management.Region;
+import com.azure.core.management.profile.AzureProfile;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.resourcemanager.AzureResourceManager;
+import com.azure.resourcemanager.eventhubs.models.EventHub;
+import com.azure.resourcemanager.eventhubs.models.EventHubConsumerGroup;
+import com.azure.resourcemanager.eventhubs.models.EventHubNamespace;
+import com.azure.resourcemanager.storage.models.StorageAccountSkuType;
+import com.azure.resourcemanager.storage.models.StorageAccount.DefinitionStages.WithCreate;
+import com.microsoft.azure.management.samples.Utils;
+
 /**
- * Azure Event Hub sample for managing event hub -
- *   - Create an event hub namespace
- *   - Create an event hub in the namespace with data capture enabled along with a consumer group and rule
- *   - List consumer groups in the event hub
- *   - Create a second event hub in the namespace
- *   - Create a consumer group in the second event hub
- *   - List consumer groups in the second event hub
- *   - Create an event hub namespace along with event hub.
+ * Azure Event Hub sample for managing event hub - - Create an event hub
+ * namespace - Create an event hub in the namespace with data capture enabled
+ * along with a consumer group and rule - List consumer groups in the event hub
+ * - Create a second event hub in the namespace - Create a consumer group in the
+ * second event hub - List consumer groups in the second event hub - Create an
+ * event hub namespace along with event hub.
  */
 public class ManageEventHub {
     /**
      * Main function which runs the actual sample.
+     * 
      * @param azure instance of the azure client
      * @return true if sample runs successfully
      */
-    public static boolean runSample(Azure azure) {
-        final String rgName = SdkContext.randomResourceName("rgNEMV_", 24);
-        final String namespaceName1 = SdkContext.randomResourceName("ns", 14);
-        final String namespaceName2 = SdkContext.randomResourceName("ns", 14);
-        final String storageAccountName = SdkContext.randomResourceName("stg", 14);
-        final String eventHubName1 = SdkContext.randomResourceName("eh", 14);
-        final String eventHubName2 = SdkContext.randomResourceName("eh", 14);
+    public static boolean runSample(AzureResourceManager azureResourceManager) {
+        final String rgName = Utils.randomResourceName(azureResourceManager, "rgNEMV_", 24);
+        final String namespaceName1 = Utils.randomResourceName(azureResourceManager, "ns", 14);
+        final String namespaceName2 = Utils.randomResourceName(azureResourceManager, "ns", 14);
+        final String storageAccountName = Utils.randomResourceName(azureResourceManager, "stg", 14);
+        final String eventHubName1 = Utils.randomResourceName(azureResourceManager, "eh", 14);
+        final String eventHubName2 = Utils.randomResourceName(azureResourceManager, "eh", 14);
         try {
 
-            //============================================================
+            // ============================================================
             // Create an event hub namespace
             //
             System.out.println("Creating a namespace");
 
-            EventHubNamespace namespace1 = azure.eventHubNamespaces()
-                    .define(namespaceName1)
-                        .withRegion(Region.US_EAST2)
-                        .withNewResourceGroup(rgName)
-                        .create();
+            EventHubNamespace namespace1 = azureResourceManager.eventHubNamespaces().define(namespaceName1)
+                    .withRegion(Region.US_EAST2).withNewResourceGroup(rgName).create();
 
             Utils.print(namespace1);
             System.out.println("Created a namespace");
-            //============================================================
-            // Create an event hub in the namespace with data capture enabled, with consumer group and auth rule
+            // ============================================================
+            // Create an event hub in the namespace with data capture enabled, with consumer
+            // group and auth rule
             //
 
-            Creatable<StorageAccount> storageAccountCreatable = azure.storageAccounts()
-                    .define(storageAccountName)
-                        .withRegion(Region.US_EAST2)
-                        .withExistingResourceGroup(rgName)
-                        .withSku(StorageAccountSkuType.STANDARD_LRS);
+            WithCreate storageAccountCreatable = azureResourceManager.storageAccounts().define(storageAccountName)
+                    .withRegion(Region.US_EAST2).withExistingResourceGroup(rgName)
+                    .withSku(StorageAccountSkuType.STANDARD_LRS);
 
             System.out.println("Creating an event hub with data capture enabled with a consumer group and rule in it");
 
-            EventHub eventHub1 = azure.eventHubs()
-                    .define(eventHubName1)
-                        .withExistingNamespace(namespace1)
-                        // Optional - configure data capture
-                        .withNewStorageAccountForCapturedData(storageAccountCreatable, "datacpt")
-                        .withDataCaptureEnabled()
-                        // Optional - create one consumer group in event hub
-                        .withNewConsumerGroup("cg1", "sometadata")
-                        // Optional - create an authorization rule for event hub
-                        .withNewListenRule("listenrule1")
-                        .create();
+            EventHub eventHub1 = azureResourceManager.eventHubs().define(eventHubName1)
+                    .withExistingNamespace(namespace1)
+                    // Optional - configure data capture
+                    .withNewStorageAccountForCapturedData(storageAccountCreatable, "datacpt").withDataCaptureEnabled()
+                    // Optional - create one consumer group in event hub
+                    .withNewConsumerGroup("cg1", "sometadata")
+                    // Optional - create an authorization rule for event hub
+                    .withNewListenRule("listenrule1").create();
 
             System.out.println("Created an event hub with data capture enabled with a consumer group and rule in it");
             Utils.print(eventHub1);
 
-            //============================================================
+            // ============================================================
             // Retrieve consumer groups in the event hub
             //
             System.out.println("Retrieving consumer groups");
 
-            PagedList<EventHubConsumerGroup> consumerGroups = eventHub1.listConsumerGroups();
+            PagedIterable<EventHubConsumerGroup> consumerGroups = eventHub1.listConsumerGroups();
 
             System.out.println("Retrieved consumer groups");
             for (EventHubConsumerGroup group : consumerGroups) {
@@ -102,7 +97,7 @@ public class ManageEventHub {
 
             System.out.println("Creating another event hub in the namespace");
 
-            EventHub eventHub2 = azure.eventHubNamespaces()
+            EventHub eventHub2 = azureResourceManager.eventHubNamespaces()
                     .eventHubs()
                     .define(eventHubName2)
                         .withExistingNamespace(namespace1)
@@ -117,7 +112,7 @@ public class ManageEventHub {
 
             System.out.println("Creating a consumer group in the second event hub");
 
-            EventHubConsumerGroup consumerGroup2 = azure.eventHubNamespaces()
+            EventHubConsumerGroup consumerGroup2 = azureResourceManager.eventHubNamespaces()
                     .eventHubs()
                     .consumerGroups()
                     .define("cg2")
@@ -147,7 +142,7 @@ public class ManageEventHub {
 
             System.out.println("Creating an event hub namespace along with event hub");
 
-            EventHubNamespace namespace2 = azure.eventHubNamespaces()
+            EventHubNamespace namespace2 = azureResourceManager.eventHubNamespaces()
                     .define(namespaceName2)
                         .withRegion(Region.US_EAST2)
                         .withExistingResourceGroup(rgName)
@@ -166,7 +161,7 @@ public class ManageEventHub {
         } finally {
             try {
                 System.out.println("Deleting Resource Group: " + rgName);
-                azure.resourceGroups().deleteByName(rgName);
+                azureResourceManager.resourceGroups().deleteByName(rgName);
                 System.out.println("Deleted Resource Group: " + rgName);
             } catch (NullPointerException npe) {
                 System.out.println("Did not create any resources in Azure. No clean up is necessary");
@@ -186,17 +181,18 @@ public class ManageEventHub {
             //=============================================================
             // Authenticate
 
-            final File credFile = new File(System.getenv("AZURE_AUTH_LOCATION"));
+            final AzureProfile profile = new AzureProfile(AzureEnvironment.AZURE);
+            final TokenCredential credential = new DefaultAzureCredentialBuilder()
+                    .authorityHost(profile.getEnvironment().getActiveDirectoryEndpoint()).build();
 
-            Azure azure = Azure.configure()
-                    .withLogLevel(LogLevel.BASIC)
-                    .authenticate(credFile)
-                    .withDefaultSubscription();
+            AzureResourceManager azureResourceManager = AzureResourceManager.configure()
+                    .withLogLevel(HttpLogDetailLevel.BASIC).authenticate(credential, profile).withDefaultSubscription();
+
 
             // Print selected subscription
-            System.out.println("Selected subscription: " + azure.subscriptionId());
+            System.out.println("Selected subscription: " + azureResourceManager.subscriptionId());
 
-            runSample(azure);
+            runSample(azureResourceManager);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
